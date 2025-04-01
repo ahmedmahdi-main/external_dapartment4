@@ -16,6 +16,9 @@ class BookController extends GetxController {
   final ImagePicker _picker = ImagePicker();
   Rx<String> path = ''.obs;
 
+  // Add the selectedBook property
+  Rx<Book?> selectedBook = Rx<Book?>(null);
+
   @override
   onInit() async {
     super.onInit();

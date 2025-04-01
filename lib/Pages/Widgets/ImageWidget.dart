@@ -10,7 +10,7 @@ import '../../Controllers/BookController.dart'; // Assuming GFImageOverlay is fr
 class ImageWidget extends StatelessWidget {
   ImageWidget({super.key, required this.imageName});
 
-  String imageName;
+ final String imageName;
 
   @override
   Widget build(BuildContext context) {
