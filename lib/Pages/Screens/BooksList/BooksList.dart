@@ -17,7 +17,6 @@ import '../../Widgets/MyLiquidLinearProgressIndicator.dart';
 import '../../Widgets/MySliverAppBar.dart';
 import '../../Widgets/NoBooksWidget.dart';
 import '../AlertDialogs/AlertDialog.dart';
-import '../InsertBook/InsertBookScreen.dart';
 import '../../../Widgets/StyledText.dart'; // Import the new StyledText widget
 
 class BooksList extends StatelessWidget {
@@ -198,14 +197,29 @@ class BooksList extends StatelessWidget {
     var result = await AlertDialogs.yesNoDialog(
         Get.context!, 'حذف الكتاب', 'هل تريد تأكيد حذف الكتاب "${book.title}"؟');
     if (result == DialogsAction.yes) {
-      try {
-        await bookController.deleteBook(book); // Call the delete method from the controller
-        SnackBars().snackBarSuccess('تم حذف الكتاب بنجاح', '');
-      } catch (e) {
-        SnackBars().snackBarFail('حدث خطأ أثناء حذف الكتاب', e.toString());
-      }
+        try {
+            // Delete associated files
+            if (book.pdfPath != null && book.pdfPath!.isNotEmpty) {
+                File pdfFile = File(book.pdfPath!);
+                if (await pdfFile.exists()) {
+                    await pdfFile.delete();
+                }
+            }
+            for (String imagePath in book.imagePaths) {
+                File imageFile = File(imagePath);
+                if (await imageFile.exists()) {
+                    await imageFile.delete();
+                }
+            }
+
+            // Delete the book from the database
+            await bookController.deleteBook(book);
+            SnackBars().snackBarSuccess('تم حذف الكتاب بنجاح', '');
+        } catch (e) {
+            SnackBars().snackBarFail('حدث خطأ أثناء حذف الكتاب', e.toString());
+        }
     }
-  }
+}
 
   Widget _buildMainContent(BookController bookController) {
     return Obx(() {
@@ -379,7 +393,7 @@ class BooksList extends StatelessWidget {
 
   SliverAppBar createSilverAppBar2() {
     return SliverAppBar(
-      backgroundColor: hexStringToColor('006A71').withOpacity(0.5),
+      backgroundColor: hexStringToColor('006A71').withAlpha(125),
       pinned: true,
       automaticallyImplyLeading: false,
       title: Container(

@@ -94,3 +94,8 @@ flutter:
     - Assets/Images/background2.png
     - Assets/Images/background3.png
     - Assets/Images/noImageAvailable.png
+    - Assets/Icons/app_icon.ico
+
+windows:
+  application_name: "قسم المواقع الخارجية"
+  icon: "Assets/Icons/app_icon.ico"

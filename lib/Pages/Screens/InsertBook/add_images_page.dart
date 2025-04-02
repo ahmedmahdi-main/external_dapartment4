@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart'; // Import the PDF viewer package
 
 import '../../../Controllers/BookController.dart';
 import '../../../Models/Book.dart';
@@ -11,7 +12,6 @@ import '../../../Services/Config/SizeConfig.dart';
 import '../../../Services/SnackBars/Snackbars.dart';
 import '../../Widgets/MyButton.dart';
 import '../../Widgets/build_image_tile.dart';
-import '../Details/pdf_viewer_page.dart';
 
 class AddImagesPage extends StatefulWidget {
   const AddImagesPage({Key? key}) : super(key: key);
@@ -50,140 +50,142 @@ class _AddImagesPageState extends State<AddImagesPage> {
           style: TextStyle(fontSize: 20, color: Colors.white),
         )),
       ),
-      body: book == null
-          ? Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  children: [
-                    book!.imagePaths.isNotEmpty
-                        ? GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2, // Number of columns
-                              crossAxisSpacing: 10.0,
-                              mainAxisSpacing: 10.0,
-                            ),
-                            itemCount: book!.imagePaths.length,
-                            itemBuilder: (context, index) {
-                              String imagePath = book!.imagePaths[index];
-                              return BuildImageTile(
-                                imagePath: imagePath,
-                                onDelete: () async {
-                                  await _deleteImage(imagePath);
-                                },
-                              );
-                            },
-                          )
-                        : Center(
-                            child: Text(
-                              'لا توجد صور',
-                              style:
-                                  TextStyle(fontSize: 16, color: Colors.grey),
-                            ),
-                          ),
-                    Row(children: [
-                      Flexible(
-                        flex: 1,
-                        child: MyButton(
-                            label: 'كامرة',
-                            onTab: () async {
-                              await _pickAndSaveImage(ImageSource.camera);
-                            },
-                            width: SizeConfig.screenWidth,
-                            widget: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Icon(
-                                Icons.camera_alt_outlined,
-                                color: Colors.white,
-                              ),
-                            )),
-                      ),
-                      Flexible(
-                        child: MyButton(
-                            label: 'الاستوديو',
-                            onTab: () async {
-                              await _pickAndSaveImage(ImageSource.gallery);
-                            },
-                            width: SizeConfig.screenWidth,
-                            widget: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Icon(
-                                Icons.image,
-                                color: Colors.white,
-                              ),
-                            )),
-                      ),
-                    ]),
-                    Row(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isDesktop = constraints.maxWidth > 600; // Adjust breakpoint as needed
+          return book == null
+              ? Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.all(isDesktop ? 20.0 : 8.0), // Adjust padding
+                    child: Column(
                       children: [
-                        Flexible(
-                          flex: 1,
-                          child: MyButton(
-                            label: 'إضافة ملف PDF',
-                            onTab: () async {
-                              await bookController.pickAndSavePdf(book!);
-                            },
-                            width: SizeConfig.screenWidth,
-                            widget: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 25),
-                              child: Icon(
-                                Icons.picture_as_pdf,
-                                color: Colors.white,
-                                size: 35,
+                        if (book!.pdfPath != null && book!.pdfPath!.isNotEmpty)
+                          SizedBox(
+                            height: 600, // Set a fixed height for the PDF viewer
+                            child: GestureDetector(
+                              onTap: () {
+                                Get.toNamed('/PdfViewer', arguments: {'pdfPath': book!.pdfPath});
+                              },
+                              child: Card(
+                                elevation: 4,
+                                clipBehavior: Clip.antiAlias, // Ensure the content fits within the card
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: SfPdfViewer.file(
+                                  File(book!.pdfPath!), // Render the PDF file
+                                  canShowScrollHead: false,
+                                  canShowScrollStatus: false,
+                                  enableDoubleTapZooming: false,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        Flexible(
-                          flex: 1,
-                          child: MyButton(
-                            label: 'عرض ملف PDF',
-                            onTab: () async {
-                              _viewPdf();
-                            },
-                            width: SizeConfig.screenWidth,
-                            widget: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 25),
-                              child: Icon(
-                                Icons.picture_as_pdf,
-                                color: Colors.white,
-                                size: 35,
+                        const SizedBox(height: 10),
+                        book!.imagePaths.isNotEmpty
+                            ? GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: isDesktop ? 4 : 2, // More columns for desktop
+                                  crossAxisSpacing: 10.0,
+                                  mainAxisSpacing: 10.0,
+                                ),
+                                itemCount: book!.imagePaths.length,
+                                itemBuilder: (context, index) {
+                                  String imagePath = book!.imagePaths[index];
+                                  return BuildImageTile(
+                                    imagePath: imagePath,
+                                    onDelete: () async {
+                                      await _deleteImage(imagePath);
+                                    },
+                                  );
+                                },
+                              )
+                            : Center(
+                                child: Text(
+                                  'لا توجد صور',
+                                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                                ),
                               ),
+                        SizedBox(height: isDesktop ? 20 : 10),
+                        Row(
+                          children: [
+                           Flexible(
+                              flex: 2,
+                              child: MyButton(
+                                label: 'إضافة ملف PDF',
+                                onTab: () async {
+                                  await bookController.pickAndSavePdf(book!);
+                                  setState(() {}); // Refresh the UI to show the new PDF
+                                },
+                                width: isDesktop
+                                    ? constraints.maxWidth * 0.4
+                                    : SizeConfig.screenWidth,
+                                widget: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 25),
+                                  child: Icon(
+                                    Icons.picture_as_pdf,
+                                    color: Colors.white,
+                                    size: 35,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: isDesktop ? 20 : 10),
+                            Flexible(
+                              flex: 1,
+                              child: MyButton(
+                                label: 'اختر صورة من المعرض',
+                                onTab: () async {
+                                  await _pickAndSaveImage(ImageSource.gallery);
+                                },
+                                width: isDesktop
+                                    ? constraints.maxWidth * 0.4
+                                    : SizeConfig.screenWidth,
+                                widget: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Icon(
+                                    Icons.image,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                    
+                        SizedBox(height: isDesktop ? 20 : 10),
+                        MyButton(
+                          label: 'حفظ ',
+                          onTab: () async {
+                            try {
+                              await bookController.updateBook(book!);
+                              SnackBars().snackBarSuccess('تم حفظ  بنجاح', '');
+                              Get.offAllNamed('/BooksList');
+                            } on Exception catch (e) {
+                              SnackBars().snackBarFail('هنالك مشكلة', e.toString());
+                            }
+                          },
+                          width: isDesktop
+                              ? constraints.maxWidth * 0.5
+                              : SizeConfig.screenWidth,
+                          widget: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 25),
+                            child: Icon(
+                              Icons.save_outlined,
+                              color: Colors.white,
+                              size: 35,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    MyButton(
-                      label: 'حفظ ',
-                      onTab: () async {
-                        try {
-                          await bookController.updateBook(book!);
-                          SnackBars().snackBarSuccess('تم حفظ  بنجاح', '');
-                          Get.offAllNamed('/BooksList');
-                        } on Exception catch (e) {
-                          SnackBars().snackBarFail('هنالك مشكلة', e.toString());
-                        }
-                      },
-                      width: SizeConfig.screenWidth,
-                      widget: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 25),
-                        child: Icon(
-                          Icons.save_outlined,
-                          color: Colors.white,
-                          size: 35,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                  ),
+                );
+        },
+      ),
     );
   }
 
@@ -209,15 +211,6 @@ class _AddImagesPageState extends State<AddImagesPage> {
     }
   }
 
-  void _viewPdf() {
-    if (book == null || book!.pdfPath == null) {
-      SnackBars().snackBarFail('لا يوجد ملف PDF للعرض', '');
-      return;
-    }
-
-    // Navigate to the PDF viewer
-    Get.to(() => PdfViewerPage(pdfPath: book!.pdfPath!));
-  }
 
   Future<void> _pickAndSaveImage(ImageSource source) async {
     if (book == null) return;
