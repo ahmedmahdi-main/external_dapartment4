@@ -48,7 +48,7 @@ class _BuildImageTileState extends State<BuildImageTile> {
                       tag: widget.imagePath,
                       child: Image.file(
                         File(widget.imagePath),
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
                         width: double.infinity,
                         height: double.infinity,
                       ),

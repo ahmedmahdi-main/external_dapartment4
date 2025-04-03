@@ -3,7 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart'; // Import the PDF viewer package
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../Controllers/BookController.dart';
 import '../../../Models/Book.dart';
@@ -95,11 +96,43 @@ class _AddImagesPageState extends State<AddImagesPage> {
                                 itemCount: book!.imagePaths.length,
                                 itemBuilder: (context, index) {
                                   String imagePath = book!.imagePaths[index];
-                                  return BuildImageTile(
-                                    imagePath: imagePath,
-                                    onDelete: () async {
-                                      await _deleteImage(imagePath);
-                                    },
+                                  return Stack(
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () async {
+                                          final imageUri = Uri.file(book!.imagePaths[index]);
+                                            if (await canLaunchUrl(imageUri)) {
+                                              await launchUrl(imageUri);
+                                            } else {
+                                              SnackBars().snackBarFail('تعذر فتح الصورة', 'الملف غير مدعوم.');
+                                            }
+                                        },
+                                        child: BuildImageTile(
+                                          imagePath: imagePath,
+                                          onDelete: () async {
+                                            await _deleteImage(imagePath);
+                                          },
+                                        ),
+                                      ),
+                                      Positioned(
+                                        top: 8,
+                                        right: 8,
+                                        child: GestureDetector(
+                                          onTap: () async {
+                                            await _deleteImage(imagePath);
+                                          },
+                                          child: CircleAvatar(
+                                            backgroundColor: Colors.red,
+                                            radius: 16,
+                                            child: Icon(
+                                              Icons.close,
+                                              color: Colors.white,
+                                              size: 18,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   );
                                 },
                               )
@@ -111,9 +144,11 @@ class _AddImagesPageState extends State<AddImagesPage> {
                               ),
                         SizedBox(height: isDesktop ? 20 : 10),
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                            Flexible(
-                              flex: 2,
+                              flex: 3,
                               child: MyButton(
                                 label: 'إضافة ملف PDF',
                                 onTab: () async {
@@ -135,9 +170,9 @@ class _AddImagesPageState extends State<AddImagesPage> {
                             ),
                             SizedBox(width: isDesktop ? 20 : 10),
                             Flexible(
-                              flex: 1,
+                              flex: 3,
                               child: MyButton(
-                                label: 'اختر صورة من المعرض',
+                                label: 'اختر صور من المعرض',
                                 onTab: () async {
                                   await _pickAndSaveImage(ImageSource.gallery);
                                 },

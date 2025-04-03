@@ -29,6 +29,5 @@ class MyLiquidLinearProgressIndicator extends StatelessWidget {
         ),
       ),
     );
-    ;
   }
 }

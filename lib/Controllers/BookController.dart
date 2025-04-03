@@ -166,8 +166,8 @@ class BookController extends GetxController {
 
   Future<void> pickAndSaveImage(ImageSource source, Book book) async {
     try {
-      final XFile? image = await _picker.pickImage(source: source);
-      if (image != null) {
+      final List<XFile>? images = await _picker.pickMultiImage(); // Allow multiple image selection
+      if (images != null && images.isNotEmpty) {
         // Get Windows Documents folder path
         final documentsPath = _getWindowsDocumentsPath();
 
@@ -185,23 +185,25 @@ class BookController extends GetxController {
           await imageDir.create(recursive: true);
         }
 
-        // Generate safe filename
-        final fileName =
-            '${_sanitizeFileName(book.title ?? '')}_'
-            '${DateTime.now().millisecondsSinceEpoch}.png';
+        for (XFile image in images) {
+          // Generate safe filename
+          final fileName =
+              '${_sanitizeFileName(book.title ?? '')}_'
+              '${DateTime.now().millisecondsSinceEpoch}_${images.indexOf(image)}.png';
 
-        // Create destination path
-        final imagePath = p.join(imageDir.path, fileName);
+          // Create destination path
+          final imagePath = p.join(imageDir.path, fileName);
 
-        // Copy image and update book
-        await File(image.path).copy(imagePath);
-        book.imagePaths.add(imagePath);
+          // Copy image and update book
+          await File(image.path).copy(imagePath);
+          book.imagePaths.add(imagePath);
+        }
+
         await updateBook(book);
-
-        debugPrint('Image saved to: $imagePath');
+        debugPrint('Images saved successfully.');
       }
     } catch (e) {
-      debugPrint('Error handling image: ${e.toString()}');
+      debugPrint('Error handling images: ${e.toString()}');
     }
   }
 

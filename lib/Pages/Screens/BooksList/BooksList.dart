@@ -4,8 +4,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:get/get.dart';
-import 'package:flutter/foundation.dart'; // For platform checks
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart'; // Import the PDF viewer package
+import 'package:flutter/foundation.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../Controllers/BookController.dart';
 import '../../../Models/Book.dart';
@@ -17,7 +18,7 @@ import '../../Widgets/MyLiquidLinearProgressIndicator.dart';
 import '../../Widgets/MySliverAppBar.dart';
 import '../../Widgets/NoBooksWidget.dart';
 import '../AlertDialogs/AlertDialog.dart';
-import '../../../Widgets/StyledText.dart'; // Import the new StyledText widget
+import '../../../Widgets/StyledText.dart';
 
 class BooksList extends StatelessWidget {
   const BooksList({super.key});
@@ -56,14 +57,10 @@ class BooksList extends StatelessWidget {
         backgroundColor: Get.isDarkMode ? darkGreyClr : primaryClr,
         onPressed: () async {
           await Get.toNamed('/InsertBook', arguments: {'bookId': 0});
-          bookController.getAllBooks(); // Refresh the book list
+          bookController.getAllBooks();
         },
         tooltip: 'اضافة كتاب جديد',
-        child: const Icon(
-          Icons.add,
-          size: 45,
-          color: Colors.white,
-        ),
+        child: const Icon(Icons.add, size: 45, color: Colors.white),
       ),
     );
   }
@@ -95,7 +92,7 @@ class BooksList extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${bookController.bookList.length}', // Display the count of books
+                  '${bookController.bookList.length}',
                   style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -106,7 +103,7 @@ class BooksList extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             child: TextField(
               onChanged: (value) {
-                searchQuery.value = value; // Update the search query
+                searchQuery.value = value;
               },
               decoration: InputDecoration(
                 hintText: 'بحث بالعنوان أو الرقم...',
@@ -127,7 +124,7 @@ class BooksList extends StatelessWidget {
                 var book = filteredBooks[index];
                 return GestureDetector(
                   onTap: () {
-                    bookController.selectedBook.value = book; // Update the selected book
+                    bookController.selectedBook.value = book;
                   },
                   child: Card(
                     elevation: 4,
@@ -197,29 +194,26 @@ class BooksList extends StatelessWidget {
     var result = await AlertDialogs.yesNoDialog(
         Get.context!, 'حذف الكتاب', 'هل تريد تأكيد حذف الكتاب "${book.title}"؟');
     if (result == DialogsAction.yes) {
-        try {
-            // Delete associated files
-            if (book.pdfPath != null && book.pdfPath!.isNotEmpty) {
-                File pdfFile = File(book.pdfPath!);
-                if (await pdfFile.exists()) {
-                    await pdfFile.delete();
-                }
-            }
-            for (String imagePath in book.imagePaths) {
-                File imageFile = File(imagePath);
-                if (await imageFile.exists()) {
-                    await imageFile.delete();
-                }
-            }
-
-            // Delete the book from the database
-            await bookController.deleteBook(book);
-            SnackBars().snackBarSuccess('تم حذف الكتاب بنجاح', '');
-        } catch (e) {
-            SnackBars().snackBarFail('حدث خطأ أثناء حذف الكتاب', e.toString());
+      try {
+        if (book.pdfPath != null && book.pdfPath!.isNotEmpty) {
+          File pdfFile = File(book.pdfPath!);
+          if (await pdfFile.exists()) {
+            await pdfFile.delete();
+          }
         }
+        for (String imagePath in book.imagePaths) {
+          File imageFile = File(imagePath);
+          if (await imageFile.exists()) {
+            await imageFile.delete();
+          }
+        }
+        await bookController.deleteBook(book);
+        SnackBars().snackBarSuccess('تم حذف الكتاب بنجاح', '');
+      } catch (e) {
+        SnackBars().snackBarFail('حدث خطأ أثناء حذف الكتاب', e.toString());
+      }
     }
-}
+  }
 
   Widget _buildMainContent(BookController bookController) {
     return Obx(() {
@@ -233,22 +227,29 @@ class BooksList extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Fixed header section
           Container(
             padding: const EdgeInsets.all(16.0),
-            color: Colors.grey[200], // Optional background color for the header
+            color: Colors.grey[200],
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 StyledText(text: 'العنوان: ${book.title ?? 'لا يوجد عنوان'}'),
-                StyledText(
-                  text: 'عدد الصور: ${book.imagePaths.length}', // Display the count of images
+                Row(
+                  children: [
+                    StyledText(text: 'عدد الصور: ${book.imagePaths.length}'),
+                 if (book != null)
+                  IconButton(
+                    icon: const Icon(Icons.refresh, color: Colors.blue),
+                    onPressed: () {
+                      bookController.selectedBook.value = null;
+                    },
+                  ),
+                  ],
                 ),
               ],
             ),
           ),
-          const Divider(), // Optional divider between header and content
-          // Scrollable content section
+          const Divider(),
           Expanded(
             child: SingleChildScrollView(
               child: Container(
@@ -258,19 +259,27 @@ class BooksList extends StatelessWidget {
                   children: [
                     if (book.pdfPath != null && book.pdfPath!.isNotEmpty)
                       SizedBox(
-                        height: 600, // Set a fixed height for the PDF viewer
+                        height: 600,
                         child: GestureDetector(
-                          onTap: () {
-                            Get.toNamed('/PdfViewer', arguments: {'pdfPath': book.pdfPath});
+                          onTap: () async {
+                            final pdfUri = Uri.file(book.pdfPath!);
+                            if (await canLaunchUrl(pdfUri)) {
+                              await launchUrl(
+                                pdfUri,
+                                mode: LaunchMode.externalApplication, // Ensure it opens in an external app
+                              );
+                            } else {
+                              SnackBars().snackBarFail('تعذر فتح ملف PDF', 'الملف غير مدعوم.');
+                            }
                           },
                           child: Card(
                             elevation: 4,
-                            clipBehavior: Clip.antiAlias, // Ensure the content fits within the card
+                            clipBehavior: Clip.antiAlias,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: SfPdfViewer.file(
-                              File(book.pdfPath!), // Render the PDF file
+                              File(book.pdfPath!),
                               canShowScrollHead: false,
                               canShowScrollStatus: false,
                               enableDoubleTapZooming: false,
@@ -283,30 +292,35 @@ class BooksList extends StatelessWidget {
                       StyledText(text: 'الصور:'),
                     const SizedBox(height: 10),
                     GridView.builder(
-                      shrinkWrap: true, // Allow GridView to shrink to fit its content
-                      physics: const NeverScrollableScrollPhysics(), // Disable GridView scrolling
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3, // Number of columns
+                        crossAxisCount: 3,
                         crossAxisSpacing: 10,
                         mainAxisSpacing: 10,
-                        childAspectRatio: 1, // Ensure square cells
+                        childAspectRatio: 1,
                       ),
                       itemCount: book.imagePaths.length,
                       itemBuilder: (context, index) {
                         return GestureDetector(
-                          onTap: () {
-                            debugPrint('Opening Image: ${book.imagePaths[index]}');
+                          onTap: () async {
+                            final imageUri = Uri.file(book.imagePaths[index]);
+                            if (await canLaunchUrl(imageUri)) {
+                              await launchUrl(imageUri);
+                            } else {
+                              SnackBars().snackBarFail('تعذر فتح الصورة', 'الملف غير مدعوم.');
+                            }
                           },
                           child: Card(
                             color: Get.isDarkMode ? hexStringToColor('F2EFE7') : Colors.white,
                             elevation: 4,
-                            clipBehavior: Clip.antiAlias, // Ensure the image fits within the card
+                            clipBehavior: Clip.antiAlias,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Image.file(
                               File(book.imagePaths[index]),
-                              fit: BoxFit.contain, // Ensure the image covers the entire cell
+                              fit: BoxFit.contain,
                               width: double.infinity,
                               height: double.infinity,
                               errorBuilder: (context, error, stackTrace) {
@@ -415,11 +429,7 @@ class BooksList extends StatelessWidget {
                 ),
                 prefix: const Padding(
                   padding: EdgeInsets.fromLTRB(5.0, 5.0, 0.0, 5.0),
-                  child: Icon(
-                    Icons.search,
-                    size: 25,
-                    color: Colors.black,
-                  ),
+                  child: Icon(Icons.search, size: 25, color: Colors.black),
                 ),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8.0),

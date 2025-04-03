@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:external_dapartment4/Data/InitDatabase.dart';
 import 'package:flutter/material.dart';
-import 'package:sqlite3/common.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'Pages/Screens/Main/MainPage.dart';
